@@ -1,0 +1,16 @@
+Requirement
+
+
+// Cài đạt các thư viện cần thiết để chjay dự án:
+
+pip install opencv-python opencv-contrib-python numpy
+
+Đợi một chút để máy tải thư viện về. Nếu thấy dòng chữ "Successfully installed..." là xong.
+
+Chúc mừng em! 🎉 Việc em thấy khung xanh chạy mượt mà chứng tỏ nền tảng hệ thống (OpenCV và YuNet) trên máy em đã hoạt động rất ổn định. 
+Đây là bước quan trọng nhất.Bây giờ chúng ta sẽ sang Bước 3: Dạy cho máy tính biết "Em là ai".Hiện tại, máy tính chỉ biết "À, có người đang nhìn tôi" (Detect), nhưng chưa biết đó là Đô hay người lạ. Chúng ta sẽ lắp thêm "bộ não" SFace để nó ghi nhớ khuôn mặt của em.Em hãy hình dung quy trình như sau:YuNet (Bảo vệ): Tìm xem mặt ở đâu, cắt hình khuôn mặt đó ra.SFace 
+(Thư ký): Đo đạc khuôn mặt đó và biến nó thành một dãy số (gọi là vector).So sánh: Nếu dãy số này giống với dãy số của "Đô" đã lưu trước đó $\rightarrow$ Chào "Hello Đô".
+
+
+
+YuNet (Bảo vệ): Tìm xem mặt ở đâu, cắt hình khuôn mặt đó ra.SFace (Thư ký): Đo đạc khuôn mặt đó và biến nó thành một dãy số (gọi là vector).So sánh: Nếu dãy số này giống với dãy số của "Đô" đã lưu trước đó $\rightarrow$ Chào "Hello Đô".

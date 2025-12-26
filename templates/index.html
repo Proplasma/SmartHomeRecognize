@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home AI Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- CẤU HÌNH CHUNG --- */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #0f1015; color: #e0e6ed;
+            margin: 0; padding: 20px; height: 100vh; box-sizing: border-box; overflow: hidden;
+        }
+
+        /* --- BỐ CỤC CHÍNH --- */
+        .main-layout { display: flex; gap: 30px; height: 95vh; }
+        .left-panel { flex: 7; display: flex; flex-direction: column; gap: 20px; }
+        .right-panel { 
+            flex: 3; background: #1b1c25; border-radius: 20px; padding: 20px;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+        }
+
+        /* --- CAMERA & HEADER --- */
+        .camera-header { font-size: 24px; font-weight: bold; color: #00d4ff; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .video-box {
+            width: 100%; height: 100%; max-height: 60vh; object-fit: contain;
+            border-radius: 15px; border: 2px solid #333; background: #000;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+        }
+        .flash { animation: flash 0.3s; border-color: white !important; }
+        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* --- THANH CÔNG CỤ --- */
+        .control-bar { display: flex; gap: 10px; background: #242636; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
+        .input-name {
+            flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #444;
+            background: #15161e; color: white; font-size: 15px; outline: none; min-width: 120px;
+        }
+        .btn { padding: 0 15px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 5px; height: 42px; }
+        .btn-register { background: #e94560; } .btn-register:hover { background: #ff2e4d; }
+        .btn-upload { background: #6c5ce7; } .btn-upload:hover { background: #8e44ad; }
+        .btn-list { background: #00d4ff; color: #000; } .btn-list:hover { background: #00a3cc; }
+        
+        /* Nút Thống Kê Mới */
+        .btn-stats { background: #f1c40f; color: #000; } .btn-stats:hover { background: #f39c12; }
+
+        .btn-add-dev { background: #00b894; width: 100%; margin-top: 10px; justify-content: center; } 
+        .btn-add-dev:hover { background: #00cec9; }
+
+        /* --- LOG BOX --- */
+        .log-box { flex: 1; background: #000; border: 1px solid #333; border-radius: 10px; padding: 10px; font-family: monospace; color: #00ff88; overflow-y: auto; font-size: 13px; }
+
+        /* --- DANH SÁCH THIẾT BỊ --- */
+        .panel-title { font-size: 20px; font-weight: bold; color: white; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+        .device-container { overflow-y: auto; flex: 1; padding-right: 5px; }
+
+        .device-item {
+            background: #242636; padding: 15px; margin-bottom: 15px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: space-between; transition: 0.3s; 
+            border-left: 5px solid #555; cursor: pointer; position: relative;
+        }
+        .device-item:hover { background: #2f3247; transform: translateX(5px); }
+        .device-info { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .device-icon { font-size: 24px; color: #666; width: 30px; text-align: center; }
+        .device-name { font-weight: bold; font-size: 16px; }
+        .device-sub { font-size: 11px; color: #aaa; margin-top: 3px; }
+        .toggle-status { font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 20px; background: #333; color: #888; }
+        
+        .device-item.active { background: #1a2a4a; border-left: 5px solid #00d4ff; }
+        .device-item.active .device-icon { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+        .active .toggle-status { background: #00d4ff; color: #000; }
+
+        .btn-del-dev {
+            position: absolute; right: -8px; top: -8px; 
+            background: #ff2e4d; color: white; border-radius: 50%; width: 20px; height: 20px; 
+            text-align: center; line-height: 20px; font-size: 10px; cursor: pointer; display: none;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        .device-item:hover .btn-del-dev { display: block; }
+
+        /* --- MODAL --- */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+        .modal-content { background-color: #1b1c25; padding: 25px; border-radius: 15px; width: 400px; text-align: center; border: 1px solid #444; box-shadow: 0 0 20px rgba(0, 212, 255, 0.2); position: relative; }
+        /* Modal thống kê rộng hơn */
+        .modal-large { width: 800px; max-width: 90%; }
+        
+        .close-btn { position: absolute; top: 10px; right: 15px; color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer; } .close-btn:hover { color: #fff; }
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 5px; }
+        .form-input, .form-select { width: 100%; padding: 10px; background: #0f1015; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; outline: none; }
+        .form-input:focus, .form-select:focus { border-color: #00d4ff; }
+        
+        /* USER LIST UI */
+        .user-list-ui { list-style: none; padding: 0; margin-top: 20px; max-height: 200px; overflow-y: auto; }
+        .user-item { background: #242636; margin: 8px 0; padding: 10px; border-radius: 5px; border-bottom: 1px solid #333; color: #00d4ff; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn-pref { background: #e67e22; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+        .btn-pref:hover { background: #d35400; }
+        .btn-delete { background: #ff2e4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+        /* Container cho biểu đồ */
+        .charts-wrapper { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap;}
+        .chart-box { flex: 1; background: #242636; padding: 10px; border-radius: 10px; min-width: 300px; }
+    </style>
+</head>
+<body>
+
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="camera-header"><i class="fas fa-eye"></i> GIÁM SÁT TRỰC TIẾP</div>
+            <img src="{{ url_for('video_feed') }}" class="video-box" id="cameraFeed">
+
+            <div class="control-bar">
+                <input type="text" id="username" class="input-name" placeholder="Nhập tên người dùng...">
+                <button class="btn btn-register" onclick="registerUser()"><i class="fas fa-camera"></i> Lưu</button>
+                <button class="btn btn-upload" onclick="triggerUpload()"><i class="fas fa-upload"></i> Up</button>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileUpload()">
+                <button class="btn btn-list" onclick="showUserList()" title="Danh sách"><i class="fas fa-users"></i></button>
+                
+                <button class="btn btn-stats" onclick="showAnalytics()" title="Thống kê"><i class="fas fa-chart-pie"></i></button>
+            </div>
+            <div class="log-box" id="logBox"><div>[System] Khởi động hệ thống...</div></div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-title"><i class="fas fa-th-list"></i> THIẾT BỊ</div>
+            <div class="device-container" id="deviceList"></div>
+            <button class="btn btn-add-dev" onclick="showAddDeviceModal()"><i class="fas fa-plus"></i> Thêm Thiết Bị Mới</button>
+        </div>
+    </div>
+
+    <div id="addDeviceModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('addDeviceModal')">&times;</span>
+            <h3 style="color: #00d4ff;">➕ Thêm Thiết Bị</h3>
+            <div class="form-group"><label>Tên thiết bị:</label><input type="text" id="newDevName" class="form-input"></div>
+            <div class="form-group"><label>ID (Viết liền không dấu):</label><input type="text" id="newDevId" class="form-input"></div>
+            <div class="form-group"><label>Icon:</label><select id="newDevIcon" class="form-select">
+                <option value="fa-lightbulb">💡 Đèn</option><option value="fa-fan">💨 Quạt</option><option value="fa-tv">📺 Tivi</option><option value="fa-plug">🔌 Ổ cắm</option><option value="fa-music">🎵 Loa</option><option value="fa-door-open">🚪 Cửa</option>
+            </select></div>
+            <div class="form-group"><label>Cử chỉ BẬT:</label><select id="newDevOn" class="form-select">
+                <option value="OPEN_HAND">🖐 Xòe tay</option><option value="POINTING">👆 Chỉ tay</option><option value="THUMB_UP">👍 Like</option><option value="OK_SIGN">👌 OK</option><option value="LOVE">🤟 Love</option><option value="ROCK">🤘 Rock</option><option value="THREE">3️⃣ Ba Ngón</option>
+            </select></div>
+            <div class="form-group"><label>Cử chỉ TẮT:</label><select id="newDevOff" class="form-select">
+                <option value="FIST">✊ Nắm tay</option><option value="VICTORY">✌ V-Sign</option><option value="THUMB_DOWN">👎 Dislike</option><option value="ROCK">🤘 Rock</option><option value="LOVE">🤟 Love</option><option value="THREE">3️⃣ Ba Ngón</option>
+            </select></div>
+            <button class="btn btn-register" style="width:100%" onclick="addNewDevice()">Lưu Thiết Bị</button>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('userModal')">&times;</span>
+            <h3 style="color: #00d4ff;">👥 Người Dùng</h3>
+            <div style="font-size: 12px; color: #aaa;">(Tổng: <span id="totalUsers">0</span>)</div>
+            <ul id="userListUl" class="user-list-ui"></ul>
+        </div>
+    </div>
+
+    <div id="prefModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('prefModal')">&times;</span>
+            <h3 style="color: #e67e22;">⚙️ Cá Nhân Hóa</h3>
+            <div style="color: #aaa; margin-bottom: 10px;">User: <span id="prefUser" style="color:white; font-weight:bold;"></span></div>
+            <div class="form-group"><label>Chọn Thiết Bị:</label><select id="prefDevice" class="form-select"></select></div>
+            <div class="form-group"><label>Cử chỉ BẬT riêng:</label><select id="prefOn" class="form-select">
+                <option value="OPEN_HAND">🖐 Xòe tay</option><option value="POINTING">👆 Chỉ tay</option><option value="THUMB_UP">👍 Like</option><option value="OK_SIGN">👌 OK</option><option value="LOVE">🤟 Love</option><option value="ROCK">🤘 Rock</option><option value="THREE">3️⃣ Ba Ngón</option>
+            </select></div>
+            <div class="form-group"><label>Cử chỉ TẮT riêng:</label><select id="prefOff" class="form-select">
+                <option value="FIST">✊ Nắm tay</option><option value="VICTORY">✌ V-Sign</option><option value="THUMB_DOWN">👎 Dislike</option><option value="ROCK">🤘 Rock</option><option value="LOVE">🤟 Love</option><option value="THREE">3️⃣ Ba Ngón</option>
+            </select></div>
+            <button class="btn btn-register" style="width:100%; background:#e67e22;" onclick="saveUserPref()">Lưu Sở Thích</button>
+        </div>
+    </div>
+
+    <div id="analyticsModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close-btn" onclick="closeModal('analyticsModal')">&times;</span>
+            <h3 style="color: #f1c40f;">📊 Thống Kê Hoạt Động</h3>
+            <div class="charts-wrapper">
+                <div class="chart-box">
+                    <h4 style="margin:5px 0; color:#aaa;">Tỷ Lệ Người Dùng</h4>
+                    <canvas id="userChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h4 style="margin:5px 0; color:#aaa;">Tần Suất Theo Giờ</h4>
+                    <canvas id="hourChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDevices = []; // Biến lưu danh sách thiết bị
+        let uChart = null, hChart = null; // Biến lưu biểu đồ
+
+        // --- 1. RENDER THIẾT BỊ ---
+        function renderDevices(devices) {
+            currentDevices = devices;
+            let container = document.getElementById("deviceList");
+            container.innerHTML = "";
+            if (devices.length === 0) { container.innerHTML = "<div style='color:#777; text-align:center;'>Chưa có thiết bị nào</div>"; return; }
+
+            devices.forEach(dev => {
+                let isActive = dev.status === "ON";
+                let html = `
+                    <div class="device-item ${isActive ? 'active' : ''}" onclick="toggleDevice('${dev.id}', '${dev.status}')">
+                        <div class="btn-del-dev" onclick="deleteDevice('${dev.id}', event)" title="Xóa">x</div>
+                        <div class="device-info">
+                            <i class="fas ${dev.icon} device-icon"></i>
+                            <div>
+                                <div class="device-name">${dev.name}</div>
+                                <div class="device-sub">Bật: ${gestureName(dev.on_gesture)} | Tắt: ${gestureName(dev.off_gesture)}</div>
+                            </div>
+                        </div>
+                        <div class="toggle-status">${dev.status}</div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function gestureName(code) {
+            const map = { "OPEN_HAND": "🖐", "FIST": "✊", "POINTING": "👆", "VICTORY": "✌", "THUMB_UP": "👍", "THUMB_DOWN": "👎", "OK_SIGN": "👌", "LOVE": "🤟", "ROCK": "🤘", "THREE": "3️⃣" };
+            return map[code] || code;
+        }
+
+        // --- 2. LOGIC BIỂU ĐỒ (ANALYTICS) ---
+        function showAnalytics() {
+            fetch('/get_analytics').then(r=>r.json()).then(data => {
+                document.getElementById('analyticsModal').style.display = 'flex';
+                renderCharts(data);
+            });
+        }
+
+        function renderCharts(data) {
+            // Hủy biểu đồ cũ nếu có để vẽ lại
+            if(uChart) uChart.destroy();
+            if(hChart) hChart.destroy();
+
+            // Biểu đồ User (Pie)
+            uChart = new Chart(document.getElementById('userChart'), {
+                type: 'pie',
+                data: {
+                    labels: data.users.labels,
+                    datasets: [{
+                        data: data.users.data,
+                        backgroundColor: ['#e74c3c', '#3498db', '#f1c40f', '#9b59b6', '#2ecc71']
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: 'white' } } } }
+            });
+
+            // Biểu đồ Giờ (Bar)
+            hChart = new Chart(document.getElementById('hourChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.hours.labels,
+                    datasets: [{
+                        label: 'Số lần thao tác',
+                        data: data.hours.data,
+                        backgroundColor: '#00d4ff'
+                    }]
+                },
+                options: { 
+                    scales: { 
+                        x: { ticks: { color: 'white' } }, 
+                        y: { ticks: { color: 'white' }, beginAtZero: true } 
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- 3. POLLING & MAIN LOGIC ---
+        setInterval(() => {
+            fetch('/status').then(r => r.json()).then(data => {
+                if(data.last_log) {
+                    let lastLog = document.querySelector("#logBox div:last-child");
+                    if (!lastLog || !lastLog.innerText.includes(data.last_log)) {
+                        logMessage(`[History] ${data.last_log}`);
+                    }
+                }
+                renderDevices(data.devices);
+            });
+        }, 1000);
+
+        function toggleDevice(id, currentStatus) {
+            let nextAction = (currentStatus === "OFF") ? "ON" : "OFF";
+            fetch('/toggle_device', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `device_id=${id}&action=${nextAction}` });
+        }
+
+        // --- 4. MODALS & FORMS ---
+        function showAddDeviceModal() { document.getElementById("addDeviceModal").style.display = "flex"; }
+        
+        function addNewDevice() {
+            let name = document.getElementById("newDevName").value;
+            let id = document.getElementById("newDevId").value;
+            let icon = document.getElementById("newDevIcon").value;
+            let onG = document.getElementById("newDevOn").value;
+            let offG = document.getElementById("newDevOff").value;
+
+            if(!name || !id) return alert("Vui lòng nhập đủ Tên và ID!");
+
+            let fd = new FormData();
+            fd.append("name", name); fd.append("id", id); fd.append("icon", icon);
+            fd.append("on_gesture", onG); fd.append("off_gesture", offG);
+
+            fetch('/add_device', { method: 'POST', body: fd })
+            .then(r => r.json()).then(d => {
+                alert(d.message);
+                if(d.status === 'success') {
+                    closeModal('addDeviceModal');
+                    document.getElementById("newDevName").value = "";
+                    document.getElementById("newDevId").value = "";
+                }
+            });
+        }
+
+        function deleteDevice(id, event) {
+            event.stopPropagation();
+            if(!confirm("Bạn có chắc chắn muốn xóa thiết bị này không?")) return;
+            fetch('/delete_device', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `id=${id}` }).then(r => r.json()).then(d => alert(d.message));
+        }
+
+        // --- PERSONAL SETTINGS ---
+        function openPrefModal(user) {
+            document.getElementById("prefUser").innerText = user;
+            let sel = document.getElementById("prefDevice");
+            sel.innerHTML = "";
+            if(currentDevices.length === 0) { alert("Chưa có thiết bị nào!"); return; }
+            currentDevices.forEach(d => { sel.innerHTML += `<option value="${d.id}">${d.name}</option>`; });
+            document.getElementById("prefModal").style.display = "flex";
+        }
+
+        function saveUserPref() {
+            let fd = new FormData();
+            fd.append("user", document.getElementById("prefUser").innerText);
+            fd.append("device_id", document.getElementById("prefDevice").value);
+            fd.append("on_gesture", document.getElementById("prefOn").value);
+            fd.append("off_gesture", document.getElementById("prefOff").value);
+
+            fetch('/set_user_pref', { method: 'POST', body: fd })
+            .then(r => r.json()).then(d => { alert(d.message); closeModal('prefModal'); });
+        }
+
+        // --- USER & CAMERA ---
+        function registerUser() {
+            let name = document.getElementById("username").value.trim();
+            if(!name) return alert("Nhập tên!");
+            let cam = document.getElementById("cameraFeed"); cam.classList.add("flash"); setTimeout(() => cam.classList.remove("flash"), 300);
+            fetch('/register', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'name='+encodeURIComponent(name) })
+            .then(r => r.json()).then(d => { logMessage(d.message); if(d.status==='success') document.getElementById("username").value=''; alert(d.message); });
+        }
+        function triggerUpload() { if(!document.getElementById("username").value) return alert("Nhập tên trước!"); document.getElementById("fileInput").click(); }
+        function handleFileUpload() {
+            let file = document.getElementById("fileInput").files[0]; let name = document.getElementById("username").value;
+            if(!file) return; let fd = new FormData(); fd.append("file", file); fd.append("name", name);
+            fetch('/register_upload', { method: 'POST', body: fd }).then(r => r.json()).then(d => { alert(d.message); document.getElementById("fileInput").value=""; });
+        }
+        function showUserList() {
+            fetch('/get_users').then(r => r.json()).then(d => {
+                document.getElementById("totalUsers").innerText = d.count; let ul = document.getElementById("userListUl"); ul.innerHTML = "";
+                d.users.forEach(u => ul.innerHTML += `
+                    <li class="user-item">
+                        <span><i class="fas fa-user-check"></i> ${u}</span>
+                        <div>
+                            <button class="btn-pref" onclick="openPrefModal('${u}')" title="Cài đặt riêng"><i class="fas fa-cog"></i></button>
+                            <button class="btn-delete" onclick="deleteUser('${u}')">Xóa</button>
+                        </div>
+                    </li>`);
+                document.getElementById("userModal").style.display = "flex";
+            });
+        }
+        function deleteUser(name) { if(confirm(`Xóa ${name}?`)) fetch('/delete_user', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'name='+encodeURIComponent(name) }).then(r => r.json()).then(d => { alert(d.message); showUserList(); }); }
+        
+        function closeModal(id) { document.getElementById(id).style.display = "none"; }
+        window.onclick = function(e) { if(e.target.classList.contains('modal')) e.target.style.display = "none"; }
+        function logMessage(msg) { let b = document.getElementById("logBox"); let t = new Date().toLocaleTimeString(); b.innerHTML += `<div><span style="color:#888">[${t}]</span> ${msg}</div>`; b.scrollTop = b.scrollHeight; }
+    </script>
+</body>
+</html>

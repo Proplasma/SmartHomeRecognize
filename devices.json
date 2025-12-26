@@ -1,0 +1,26 @@
+[
+    {
+        "id": "light",
+        "name": "Đèn Chính",
+        "status": "OFF",
+        "on_gesture": "OPEN_HAND",
+        "off_gesture": "FIST",
+        "icon": "fa-lightbulb"
+    },
+    {
+        "id": "fan",
+        "name": "Quạt Trần",
+        "status": "OFF",
+        "on_gesture": "POINTING",
+        "off_gesture": "VICTORY",
+        "icon": "fa-fan"
+    },
+    {
+        "id": "SuperTV",
+        "name": "SuperTV",
+        "status": "ON",
+        "on_gesture": "OK_SIGN",
+        "off_gesture": "FIST",
+        "icon": "fa-tv"
+    }
+]
